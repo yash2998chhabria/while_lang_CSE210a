@@ -8,7 +8,7 @@ from lib2to3.pgen2.token import RBRACE
 EQUAL, LESSTHAN, GREATERTHAN, AND, OR, NOT, IF, THEN, ELSE , LBRACE, RBRACE,
 WHILE, DO) = (
     'INTEGER', 'PLUS', 'MINUS', 'MUL', 'DIV', '(', ')', 'ID', 'ASSIGN','SEMI', 'EOF',
-    'EQUAL', 'LESSTHAN', 'GREATERTHAN', 'AND', 'OR', 'NOT','if','then','else', '{', '}'
+    'EQUAL', 'LESSTHAN', 'GREATERTHAN', 'AND', 'OR', 'NOT','if','then','else', '{', '}',
     'while', 'do'
 )
 
@@ -238,6 +238,10 @@ class If(AST):
         self.if_true = if_true
         self.if_false = if_false
 
+class While(AST):
+    def __init__(self, boolean, if_true):
+        self.boolean = boolean 
+        self.if_true = if_true
 
 class Relation(AST):
     def __init__(self, left, op, right):
@@ -288,6 +292,22 @@ class Parser(object):
 
         return root
 
+    def while_compound(self):
+        self.eat(WHILE)
+        boolean = self.boolean_relation()
+        self.eat(DO)
+        if self.current_token.type == LBRACE:
+            self.eat(LBRACE)
+            if_true = self.compound_statement()
+            self.eat(RBRACE)
+        else:
+            if_true = self.statement()
+        # if self.current_token.type == ELSE:
+
+        node = While(boolean, if_true)   
+
+        return node     
+
     def if_compound(self):
         self.eat(IF)
         boolean = self.boolean_relation()
@@ -312,32 +332,54 @@ class Parser(object):
         return node
 
     def boolean_relation(self):
-        left = self.boolean_comparison()
-        token = self.current_token
-        if token.type == AND:
-            self.eat(AND)
-            right = self.boolean_comparison()
-            node = Relation(left,token,right)
-        elif token.type == OR:
-            self.eat(OR)
-            right = self.boolean_comparison()
-            node = Relation(left,token,right)
+        
+        def core():
+            left = self.boolean_comparison()
+            token = self.current_token
+            if token.type == AND:
+                self.eat(AND)
+                right = self.boolean_comparison()
+                node = Relation(left,token,right)
+            elif token.type == OR:
+                self.eat(OR)
+                right = self.boolean_comparison()
+                node = Relation(left,token,right)
+            else:
+                node = Relation(left,None,None)
+
+            return node 
+
+        if self.current_token.type == LPAREN:
+            self.eat(LPAREN)
+            node = core()
+            self.eat(RPAREN)
         else:
-            node = Relation(left,None,None)
+            node = core()
 
         return node 
     
     def boolean_comparison(self):
-        left = self.expr()
-        token = self.current_token
-        if token.type == EQUAL:
-            self.eat(EQUAL)
-        elif token.type == LESSTHAN:
-            self.eat(LESSTHAN)
-        elif token.type == GREATERTHAN:
-            self.eat(GREATERTHAN)
-        right = self.expr()
-        node = Comparison(left,token,right)
+
+        def core():
+            left = self.expr()
+            token = self.current_token
+            if token.type == EQUAL:
+                self.eat(EQUAL)
+            elif token.type == LESSTHAN:
+                self.eat(LESSTHAN)
+            elif token.type == GREATERTHAN:
+                self.eat(GREATERTHAN)
+            right = self.expr()
+            node = Comparison(left,token,right)
+
+            return node 
+
+        if self.current_token.type == LPAREN:
+            self.eat(LPAREN)
+            node = core()
+            self.eat(RPAREN)
+        else:
+            node = core()
 
         return node 
 
@@ -371,6 +413,8 @@ class Parser(object):
             node = self.assignment_statement()
         elif self.current_token.type == IF:
             node = self.if_compound()
+        elif self.current_token.type == WHILE:
+            node = self.while_compound()
         else:
             node = self.empty()
         return node
@@ -506,6 +550,7 @@ class NodeVisitor(object):
     def visit(self, node):
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
+
         return visitor(node)
 
     def generic_visit(self, node):
@@ -519,12 +564,17 @@ class Interpreter(NodeVisitor):
     def __init__(self, parser):
         self.parser = parser
 
+    def visit_While(self,node):
+        while self.visit(node.boolean):
+            self.visit(node.if_true)
+
+
     def visit_If(self,node):
         Bool = self.visit(node.boolean)
         if Bool is True:
-            return self.visit(node.if_true)
+            self.visit(node.if_true)
         if Bool is False:
-            return self.visit(node.if_false)
+            self.visit(node.if_false)
 
     def visit_Relation(self,node):
         if node.op is None:
