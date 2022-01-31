@@ -156,13 +156,13 @@ class Lexer(object):
                 self.advance()
                 return Token(GREATERTHAN, '>')
 
-            if self.current_char == '∨':
-                self.advance()
-                return Token(AND, '∨')
-
             if self.current_char == '∧':
                 self.advance()
-                return Token(OR, '∧')
+                return Token(AND, '∧')
+
+            if self.current_char == '∨':
+                self.advance()
+                return Token(OR, '∨')
 
             if self.current_char == '¬':
                 self.advance()
