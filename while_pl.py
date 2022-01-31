@@ -1,7 +1,4 @@
 
-
-
-
 (INTEGER, PLUS, MINUS, MUL, DIV, LPAREN, RPAREN, ID, ASSIGN, SEMI, EOF, 
 EQUAL, LESSTHAN, GREATERTHAN, AND, OR, NOT, IF, THEN, ELSE , LBRACE, RBRACE,
 WHILE, DO, TRUE, FALSE, SKIP) = (
@@ -17,13 +14,6 @@ class Token(object):
         self.value = value
 
     def __str__(self):
-        """String representation of the class instance.
-
-        Examples:
-            Token(INTEGER, 3)
-            Token(PLUS, '+')
-            Token(MUL, '*')
-        """
         return 'Token({type}, {value})'.format(
             type=self.type,
             value=repr(self.value)
@@ -57,7 +47,6 @@ class Lexer(object):
         raise Exception('Invalid character')
 
     def advance(self):
-        """Advance the `pos` pointer and set the `current_char` variable."""
         self.pos += 1
         if self.pos > len(self.text) - 1:
             self.current_char = None  # Indicates end of input
@@ -76,7 +65,6 @@ class Lexer(object):
             self.advance()
 
     def integer(self):
-        """Return a (multidigit) integer consumed from the input."""
         result = ''
         while self.current_char is not None and self.current_char.isdigit():
             result += self.current_char
@@ -84,7 +72,6 @@ class Lexer(object):
         return int(result)
 
     def _id(self):
-        """Handle identifiers and reserved keywords"""
         result = ''
         while self.current_char is not None and self.current_char.isalnum():
             result += self.current_char
@@ -94,11 +81,6 @@ class Lexer(object):
         return token
 
     def get_next_token(self):
-        """Lexical analyzer (also known as scanner or tokenizer)
-
-        This method is responsible for breaking a sentence
-        apart into tokens. One token at a time.
-        """
         while self.current_char is not None:
 
             if self.current_char.isspace():
@@ -211,7 +193,6 @@ class UnaryOp(AST):
 
 
 class Compound(AST):
-    """Represents a 'BEGIN ... END' block"""
     def __init__(self):
         self.children = []
 
@@ -224,7 +205,6 @@ class Assign(AST):
 
 
 class Var(AST):
-    """The Var node is constructed out of ID token."""
     def __init__(self, token):
         self.token = token
         self.value = token.value
@@ -266,10 +246,6 @@ class Parser(object):
         raise Exception('Invalid syntax')
 
     def eat(self, token_type):
-        # compare the current token type with the passed token
-        # type and if they match then "eat" the current token
-        # and assign the next token to the self.current_token,
-        # otherwise raise an exception.
         if self.current_token.type == token_type:
             #print('worked',self.current_token, token_type)
             self.current_token = self.lexer.get_next_token()            
@@ -278,14 +254,10 @@ class Parser(object):
             self.error()
 
     def program(self):
-        """program : compound_statement DOT"""
         node = self.compound_statement()
         return node
 
     def compound_statement(self):
-        """
-        compound_statement: BEGIN statement_list END
-        """
 
         nodes = self.statement_list()
         root = Compound()
@@ -399,10 +371,6 @@ class Parser(object):
         return node 
 
     def statement_list(self):
-        """
-        statement_list : statement
-                       | statement SEMI statement_list
-        """
         node = self.statement()
 
         results = [node]
@@ -417,13 +385,7 @@ class Parser(object):
         return results
 
     def statement(self):
-        """
-        statement : compound_statement
-                  | assignment_statement
-                  | empty
-        """
-        # if self.current_token.type == BEGIN:
-        #     node = self.compound_statement()
+
         if self.current_token.type == ID:
             node = self.assignment_statement()
         elif self.current_token.type == IF:
@@ -438,9 +400,6 @@ class Parser(object):
         return node
 
     def assignment_statement(self):
-        """
-        assignment_statement : variable ASSIGN expr
-        """
         left = self.variable()
         token = self.current_token
         self.eat(ASSIGN)
@@ -449,21 +408,14 @@ class Parser(object):
         return node
 
     def variable(self):
-        """
-        variable : ID
-        """
         node = Var(self.current_token)
         self.eat(ID)
         return node
 
     def empty(self):
-        """An empty production"""
         return NoOp()
 
     def expr(self):
-        """
-        expr : term ((PLUS | MINUS) term)*
-        """
         node = self.term()
 
         while self.current_token.type in (PLUS, MINUS):
@@ -478,7 +430,6 @@ class Parser(object):
         return node
 
     def term(self):
-        """term : factor ((MUL | DIV) factor)*"""
         node = self.factor()
 
         while self.current_token.type in (MUL, DIV):
@@ -493,12 +444,6 @@ class Parser(object):
         return node
 
     def factor(self):
-        """factor : PLUS factor
-                  | MINUS factor
-                  | INTEGER
-                  | LPAREN expr RPAREN
-                  | variable
-        """
         token = self.current_token
         if token.type == PLUS:
             self.eat(PLUS)
@@ -521,34 +466,6 @@ class Parser(object):
             return node
 
     def parse(self):
-        """
-        program : compound_statement DOT
-
-        compound_statement : BEGIN statement_list END
-
-        statement_list : statement
-                       | statement SEMI statement_list
-
-        statement : compound_statement
-                  | assignment_statement
-                  | empty
-
-        assignment_statement : variable ASSIGN expr
-
-        empty :
-
-        expr: term ((PLUS | MINUS) term)*
-
-        term: factor ((MUL | DIV) factor)*
-
-        factor : PLUS factor
-               | MINUS factor
-               | INTEGER
-               | LPAREN expr RPAREN
-               | variable
-
-        variable: ID
-        """
         node = self.program()
         if self.current_token.type != EOF:
             self.error()
@@ -669,7 +586,6 @@ def main():
     parser = Parser(lexer)
     interpreter = Interpreter(parser)
     result = interpreter.interpret()
-    # print(interpreter.GLOBAL_SCOPE)
     output_string_array = []
 
     for i in sorted(interpreter.GLOBAL_SCOPE.keys()):
