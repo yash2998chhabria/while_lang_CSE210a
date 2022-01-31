@@ -1,15 +1,13 @@
 
 
 
-from lib2to3.pgen2.token import RBRACE
-
 
 (INTEGER, PLUS, MINUS, MUL, DIV, LPAREN, RPAREN, ID, ASSIGN, SEMI, EOF, 
 EQUAL, LESSTHAN, GREATERTHAN, AND, OR, NOT, IF, THEN, ELSE , LBRACE, RBRACE,
-WHILE, DO) = (
+WHILE, DO, TRUE, FALSE) = (
     'INTEGER', 'PLUS', 'MINUS', 'MUL', 'DIV', '(', ')', 'ID', 'ASSIGN','SEMI', 'EOF',
     'EQUAL', 'LESSTHAN', 'GREATERTHAN', 'AND', 'OR', 'NOT','if','then','else', '{', '}',
-    'while', 'do'
+    'while', 'do', 'true', 'false'
 )
 
 
@@ -40,7 +38,9 @@ RESERVED_KEYWORDS = {
     'then': Token('then','then'),
     'else': Token('else','else'),
     'while': Token('while','while'),
-    'do': Token('do','do')
+    'do': Token('do','do'),
+    'true': Token('true','true'),
+    'false': Token('false','false')
 }
 
 
@@ -270,9 +270,10 @@ class Parser(object):
         # and assign the next token to the self.current_token,
         # otherwise raise an exception.
         if self.current_token.type == token_type:
+            #print('worked',self.current_token, token_type)
             self.current_token = self.lexer.get_next_token()            
         else:
-            print(self.current_token, token_type)
+            #print(self.current_token, token_type)
             self.error()
 
     def program(self):
@@ -332,20 +333,26 @@ class Parser(object):
         return node
 
     def boolean_relation(self):
-        
+
         def core():
-            left = self.boolean_comparison()
             token = self.current_token
-            if token.type == AND:
-                self.eat(AND)
-                right = self.boolean_comparison()
-                node = Relation(left,token,right)
-            elif token.type == OR:
-                self.eat(OR)
-                right = self.boolean_comparison()
-                node = Relation(left,token,right)
+            if token.type == NOT:
+                self.eat(NOT)
+                left = self.boolean_comparison()
+                node = Relation(left,token,None)
             else:
-                node = Relation(left,None,None)
+                left = self.boolean_comparison()
+                token = self.current_token
+                if token.type == AND:
+                    self.eat(AND)
+                    right = self.boolean_comparison()
+                    node = Relation(left,token,right)
+                elif token.type == OR:
+                    self.eat(OR)
+                    right = self.boolean_comparison()
+                    node = Relation(left,token,right)
+                else:
+                    node = Relation(left,None,None)
 
             return node 
 
@@ -361,16 +368,23 @@ class Parser(object):
     def boolean_comparison(self):
 
         def core():
-            left = self.expr()
-            token = self.current_token
-            if token.type == EQUAL:
-                self.eat(EQUAL)
-            elif token.type == LESSTHAN:
-                self.eat(LESSTHAN)
-            elif token.type == GREATERTHAN:
-                self.eat(GREATERTHAN)
-            right = self.expr()
-            node = Comparison(left,token,right)
+            if self.current_token.type is TRUE:
+                self.eat(TRUE)
+                node = Comparison(True,None,None)
+            elif self.current_token.type is FALSE:
+                self.eat(FALSE)
+                node = Comparison(False,None,None)
+            else:
+                left = self.expr()
+                token = self.current_token
+                if token.type == EQUAL:
+                    self.eat(EQUAL)
+                elif token.type == LESSTHAN:
+                    self.eat(LESSTHAN)
+                elif token.type == GREATERTHAN:
+                    self.eat(GREATERTHAN)
+                right = self.expr()
+                node = Comparison(left,token,right)
 
             return node 
 
@@ -583,9 +597,13 @@ class Interpreter(NodeVisitor):
             return self.visit(node.left) and self.visit(node.right)
         if node.op.type == OR:
             return self.visit(node.left) or self.visit(node.right)
+        if node.op.type == NOT:
+            return not self.visit(node.left)
 
 
     def visit_Comparison(self,node):
+        if node.op == None:
+            return node.left
         if node.op.type == EQUAL:
             return self.visit(node.left) == self.visit(node.right)
         if node.op.type == LESSTHAN:
