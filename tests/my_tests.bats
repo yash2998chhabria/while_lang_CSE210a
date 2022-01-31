@@ -1,3 +1,5 @@
+load harness
+
 @test "test-1" {
   check 'if x > 5 then x := 1 else z := 1; while y < 1 do y := 1' '{y → 1, z → 1}'
 }
