@@ -4,10 +4,10 @@
 
 (INTEGER, PLUS, MINUS, MUL, DIV, LPAREN, RPAREN, ID, ASSIGN, SEMI, EOF, 
 EQUAL, LESSTHAN, GREATERTHAN, AND, OR, NOT, IF, THEN, ELSE , LBRACE, RBRACE,
-WHILE, DO, TRUE, FALSE) = (
+WHILE, DO, TRUE, FALSE, SKIP) = (
     'INTEGER', 'PLUS', 'MINUS', 'MUL', 'DIV', '(', ')', 'ID', 'ASSIGN','SEMI', 'EOF',
     'EQUAL', 'LESSTHAN', 'GREATERTHAN', 'AND', 'OR', 'NOT','if','then','else', '{', '}',
-    'while', 'do', 'true', 'false'
+    'while', 'do', 'true', 'false', 'skip'
 )
 
 
@@ -40,7 +40,8 @@ RESERVED_KEYWORDS = {
     'while': Token('while','while'),
     'do': Token('do','do'),
     'true': Token('true','true'),
-    'false': Token('false','false')
+    'false': Token('false','false'),
+    'skip': Token('skip','skip')
 }
 
 
@@ -429,6 +430,9 @@ class Parser(object):
             node = self.if_compound()
         elif self.current_token.type == WHILE:
             node = self.while_compound()
+        elif self.current_token.type == SKIP:
+            self.eat(SKIP)
+            node = self.empty()
         else:
             node = self.empty()
         return node
@@ -659,14 +663,20 @@ class Interpreter(NodeVisitor):
 
 def main():
     import sys
-    text = open(sys.argv[1], 'r').read()
+    text = input()
 
     lexer = Lexer(text)
     parser = Parser(lexer)
     interpreter = Interpreter(parser)
     result = interpreter.interpret()
-    print(interpreter.GLOBAL_SCOPE)
+    # print(interpreter.GLOBAL_SCOPE)
+    output_string_array = []
 
+    for i in sorted(interpreter.GLOBAL_SCOPE.keys()):
+            output_string_array.append(str(i) + ' → ' + str(interpreter.GLOBAL_SCOPE[i]))
+
+    output = ''.join(["{", ", ".join(output_string_array), "}"])
+    print(output)
 
 if __name__ == '__main__':
     main()
